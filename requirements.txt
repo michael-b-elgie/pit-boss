@@ -1,0 +1,9 @@
+# No external dependencies required - uses only Python standard library
+# tkinter - GUI (included with Python)
+# json - JSON file handling (included with Python)
+# threading - Multi-threading for timer (included with Python)
+# datetime - Date and time handling (included with Python)
+# os - Operating system interface (included with Python)
+
+# For building executable:
+pyinstaller>=5.0

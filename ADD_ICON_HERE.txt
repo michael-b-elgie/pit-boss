@@ -1,0 +1,15 @@
+
+To add your poker night icon:
+
+1. Save your poker night image in this folder as one of:
+   - poker_icon.png
+   - poker_icon.gif  
+   - poker_icon.jpg
+
+2. The icon should be roughly square (same width and height)
+
+3. Recommended size: 128x128 to 512x512 pixels
+
+4. Restart the poker timer application
+
+Your icon will appear in the left panel for everyone to see!

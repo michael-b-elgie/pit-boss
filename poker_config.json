@@ -1,0 +1,109 @@
+{
+  "game_duration": 45,
+  "break_duration": 10,
+  "blind_increase_interval": 15,
+  "blinds": [
+    {
+      "small": 25,
+      "big": 50,
+      "ante": 0
+    },
+    {
+      "small": 50,
+      "big": 100,
+      "ante": 0
+    },
+    {
+      "small": 75,
+      "big": 150,
+      "ante": 25
+    },
+    {
+      "small": 100,
+      "big": 200,
+      "ante": 25
+    },
+    {
+      "small": 150,
+      "big": 300,
+      "ante": 50
+    },
+    {
+      "small": 200,
+      "big": 400,
+      "ante": 50
+    },
+    {
+      "small": 300,
+      "big": 600,
+      "ante": 75
+    },
+    {
+      "small": 400,
+      "big": 800,
+      "ante": 100
+    },
+    {
+      "small": 500,
+      "big": 1000,
+      "ante": 100
+    },
+    {
+      "small": 750,
+      "big": 1500,
+      "ante": 150
+    }
+  ],
+  "players": [],
+  "eliminated_players": [
+    {
+      "name": "Brad",
+      "position": 2,
+      "prize": 300
+    },
+    {
+      "name": "Michael",
+      "position": 3,
+      "prize": 200
+    },
+    {
+      "name": "Michelle",
+      "position": 4,
+      "prize": 0
+    },
+    {
+      "name": "Kyle",
+      "position": 1,
+      "prize": 500
+    }
+  ],
+  "prize_structure": [
+    {
+      "position": 1,
+      "percentage": 50,
+      "amount": 0
+    },
+    {
+      "position": 2,
+      "percentage": 30,
+      "amount": 0
+    },
+    {
+      "position": 3,
+      "percentage": 20,
+      "amount": 0
+    }
+  ],
+  "total_prize_pool": 1000,
+  "current_state": {
+    "level": 2,
+    "game_time_remaining": 2696,
+    "break_time_remaining": 0,
+    "blind_time_remaining": 897,
+    "is_game_running": false,
+    "is_break_running": false,
+    "last_blind_increase": "2026-03-18T22:19:34.951647"
+  },
+  "tournament_title": "Pit Boss - Poker Timer",
+  "theme": "classic"
+}
