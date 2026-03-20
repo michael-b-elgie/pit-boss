@@ -21,7 +21,8 @@ class PokerTimer:
         # Set title and window properties
         title = self.config.get("tournament_title", "Pit Boss - Poker Timer")
         self.root.title(title)
-        self.root.geometry("1200x800")
+        self.root.geometry("1400x900")  # Larger window for new layout
+        self.root.configure(bg='#1e1e1e')  # Dark background
         
         # Initialize state variables
         self.is_game_running = False
@@ -31,6 +32,8 @@ class PokerTimer:
         self.current_level = 1
         self.last_blind_increase = datetime.now()
         self.blind_time_remaining = 0  # Countdown to next blind increase
+        self.total_game_time = 0  # Total elapsed time since game start
+        self.game_start_time = None
         
         # Apply theme
         self.setup_theme()
@@ -57,6 +60,7 @@ class PokerTimer:
         default_config = {
             "tournament_title": "Pit Boss - Poker Timer",
             "theme": "dark",  # classic, dark, midnight, poker-green, vegas, royal
+            "accent_color": "#2196f3",  # Configurable blue accent color
             "game_duration": 20,  # minutes
             "break_duration": 10,  # minutes
             "blind_increase_interval": 15,  # minutes
@@ -262,13 +266,19 @@ class PokerTimer:
                         try:
                             icon_image = tk.PhotoImage(file=icon_file)
                             self.root.iconphoto(False, icon_image)
+                        except tk.TclError as e:
+                            if ".jpg" in icon_file or ".jpeg" in icon_file:
+                                print(f"⚠️  Window icon: JPEG format not supported - {icon_file}")
+                            else:
+                                print(f"⚠️  Window icon: Could not load {icon_file} - try different format")
+                            continue
                         except:
                             # If PhotoImage fails, skip icon
-                            pass
-                    print(f"Loaded icon: {icon_file}")
+                            continue
+                    print(f"✅ Loaded window icon: {icon_file}")
                     break
                 except Exception as e:
-                    print(f"Could not load icon {icon_file}: {e}")
+                    print(f"⚠️  Could not load window icon {icon_file}: {e}")
                     continue
     
     def load_display_icon(self):
@@ -281,14 +291,14 @@ class PokerTimer:
                     # Load image for display in the interface
                     original_icon = tk.PhotoImage(file=icon_file)
                     
-                    # Check size and resize if needed
+                    # Check size and resize if needed - make it bigger since we removed PIT BOSS text
                     width = original_icon.width()
                     height = original_icon.height()
                     
-                    if width > 120 or height > 120:
-                        # Calculate scale factor to fit within 120x120
-                        scale_x = 120 / width
-                        scale_y = 120 / height
+                    if width > 200 or height > 200:
+                        # Calculate scale factor to fit within 200x200 (bigger than before)
+                        scale_x = 200 / width
+                        scale_y = 200 / height
                         scale = min(scale_x, scale_y)
                         
                         if scale < 1:
@@ -303,236 +313,488 @@ class PokerTimer:
                     else:
                         self.display_icon = original_icon
                     
-                    print(f"Loaded display icon: {icon_file} ({self.display_icon.width()}x{self.display_icon.height()})")
+                    print(f"✅ Loaded display icon: {icon_file} ({self.display_icon.width()}x{self.display_icon.height()})")
                     break
                 except tk.TclError as e:
-                    print(f"Could not load display icon {icon_file}: Invalid image format or corrupted file")
+                    if "couldn't recognize data in image file" in str(e) or "unknown color type" in str(e):
+                        print(f"❌ Could not load {icon_file}: Unsupported image format")
+                        if icon_file.endswith(('.jpg', '.jpeg')):
+                            print(f"   💡 TIP: JPEG format not supported. Convert {icon_file} to PNG format")
+                            print(f"   🔧 Try: Open {icon_file} in Paint, Save As → PNG picture → poker_icon.png")
+                        else:
+                            print(f"   💡 TIP: Try resaving {icon_file} in a compatible format")
+                    else:
+                        print(f"❌ Could not load {icon_file}: {e}")
                     continue
                 except Exception as e:
-                    print(f"Could not load display icon {icon_file}: {e}")
+                    print(f"❌ Could not load {icon_file}: {e}")
                     continue
         
         if not hasattr(self, 'display_icon') or self.display_icon is None:
-            print("No valid icon found. You can add poker_icon.png, poker_icon.gif, or poker_icon.jpg to display your tournament logo.")
+            print()
+            print("🃏 No valid icon found for display.")
+            print("📁 Add one of these files to show your tournament logo:")
+            print("   • poker_icon.png (recommended)")  
+            print("   • poker_icon.gif (animated supported!)")
+            print("❌ Note: JPEG files (.jpg/.jpeg) are not supported by tkinter")
+            print("🔧 Convert JPEG to PNG: Run 'python fix_icon.py' for instructions")
     
     def setup_gui(self):
-        """Setup the main GUI"""
-        # Main container with three columns
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        """Setup the modern poker timer GUI with full three-panel layout"""
+        # Main container
+        main_frame = tk.Frame(self.root, bg='#1e1e1e')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Configure grid weights
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=2)
-        main_frame.columnconfigure(2, weight=1)
+        # Top section - Timer and circular displays
+        self.setup_timer_section(main_frame)
         
-        # Left panel - Timer and Blinds
-        left_frame = ttk.Frame(main_frame, padding="5")
-        left_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Middle section - Three-panel layout for players and prizes
+        self.setup_main_panels(main_frame)
         
-        row_counter = 0
-        
-        # Icon display section (if icon is available)
-        if hasattr(self, 'display_icon') and self.display_icon:
-            icon_frame = ttk.LabelFrame(left_frame, text="Tournament", padding="10")
-            icon_frame.grid(row=row_counter, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-            
-            # Icon display
-            icon_label = ttk.Label(icon_frame, image=self.display_icon)
-            icon_label.grid(row=0, column=0, pady=5)
-            
-            # Tournament title below icon (if different from default)
-            if self.config.get("tournament_title") != "Pit Boss - Poker Timer":
-                title_label = ttk.Label(icon_frame, text=self.config.get("tournament_title", ""), 
-                                      font=("Arial", 12, "bold"))
-                title_label.grid(row=1, column=0, pady=(5, 0))
-            
-            row_counter += 1
-        
-        # Title section (only if no icon and custom title)
-        elif self.config.get("tournament_title") != "Pit Boss - Poker Timer":
-            title_frame = ttk.LabelFrame(left_frame, text="Tournament", padding="10")
-            title_frame.grid(row=row_counter, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-            
-            title_label = ttk.Label(title_frame, text=self.config.get("tournament_title", ""), 
-                                  font=("Arial", 14, "bold"))
-            title_label.grid(row=0, column=0, pady=5)
-            
-            row_counter += 1
-        
-        # Timer section
-        timer_frame = ttk.LabelFrame(left_frame, text="Timer", padding="15")
-        timer_frame.grid(row=row_counter, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-        row_counter += 1
-        
-        self.timer_label = ttk.Label(timer_frame, text="20:00", font=("Arial", 32, "bold"))
-        self.timer_label.grid(row=0, column=0, columnspan=3, pady=(10, 5))
-        
-        # Timer progress bar
-        self.timer_progress = ttk.Progressbar(timer_frame, length=250, mode='determinate')
-        self.timer_progress.grid(row=1, column=0, columnspan=3, pady=(5, 10), sticky=(tk.W, tk.E))
-        
-        # Timer status label
-        self.status_label = ttk.Label(timer_frame, text="Game Timer", font=("Arial", 12))
-        self.status_label.grid(row=2, column=0, columnspan=3, pady=(0, 15))
-        
-        self.start_stop_btn = ttk.Button(timer_frame, text="Start Game", command=self.toggle_game_timer)
-        self.start_stop_btn.grid(row=3, column=0, padx=5, pady=5)
-        
-        self.break_btn = ttk.Button(timer_frame, text="Start Break", command=self.start_break)
-        self.break_btn.grid(row=3, column=1, padx=5, pady=5)
-        
-        self.reset_btn = ttk.Button(timer_frame, text="Reset", command=self.reset_timers)
-        self.reset_btn.grid(row=3, column=2, padx=5, pady=5)
-        
-        # Blinds section
-        blinds_frame = ttk.LabelFrame(left_frame, text="Current Blinds", padding="15")
-        blinds_frame.grid(row=row_counter, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-        row_counter += 1
-        
-        self.level_label = ttk.Label(blinds_frame, text="Level 1", font=("Arial", 18, "bold"))
-        self.level_label.grid(row=0, column=0, columnspan=2, pady=8)
-        
-        self.blinds_label = ttk.Label(blinds_frame, text="25/50", font=("Arial", 24, "bold"))
-        self.blinds_label.grid(row=1, column=0, columnspan=2, pady=8)
-        
-        self.ante_label = ttk.Label(blinds_frame, text="Ante: 0", font=("Arial", 14))
-        self.ante_label.grid(row=2, column=0, columnspan=2, pady=5)
-        
-        # Blind countdown timer with progress bar
-        self.blind_timer_label = ttk.Label(blinds_frame, text="Next increase in: 15:00", font=("Arial", 12, "bold"))
-        self.blind_timer_label.grid(row=3, column=0, columnspan=2, pady=(10, 5))
-        
-        self.blind_progress = ttk.Progressbar(blinds_frame, length=200, mode='determinate')
-        self.blind_progress.grid(row=4, column=0, columnspan=2, pady=(0, 10), sticky=(tk.W, tk.E))
-        
-        # Next blind level display
-        self.next_blind_label = ttk.Label(blinds_frame, text="Next: 50/100", font=("Arial", 10))
-        self.next_blind_label.grid(row=5, column=0, columnspan=2, pady=2)
-        
-        ttk.Button(blinds_frame, text="Next Level", command=self.next_blind_level).grid(row=6, column=0, padx=5, pady=8)
-        ttk.Button(blinds_frame, text="Prev Level", command=self.prev_blind_level).grid(row=6, column=1, padx=5, pady=8)
-        
-        # Configuration section
-        config_frame = ttk.LabelFrame(left_frame, text="Configuration", padding="10")
-        config_frame.grid(row=row_counter, column=0, sticky=(tk.W, tk.E))
-        
-        ttk.Button(config_frame, text="Edit Title", command=self.edit_title).grid(row=0, column=0, padx=5, pady=2)
-        ttk.Button(config_frame, text="Theme", command=self.change_theme).grid(row=0, column=1, padx=5, pady=2)
-        ttk.Button(config_frame, text="Edit Blinds", command=self.edit_blinds).grid(row=1, column=0, padx=5, pady=2)
-        ttk.Button(config_frame, text="Edit Prizes", command=self.edit_prizes).grid(row=1, column=1, padx=5, pady=2)
-        ttk.Button(config_frame, text="Timer Settings", command=self.edit_timer_settings).grid(row=2, column=0, padx=5, pady=2)
-        ttk.Button(config_frame, text="Save Config", command=self.save_config).grid(row=2, column=1, padx=5, pady=2)
-        
-        # Middle panel - Players
-        middle_frame = ttk.Frame(main_frame, padding="5")
-        middle_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
-        middle_frame.columnconfigure(0, weight=1)
-        middle_frame.rowconfigure(0, weight=1)
-        middle_frame.rowconfigure(1, weight=1)
-        
-        # Active Players section
-        players_frame = ttk.LabelFrame(middle_frame, text="Active Players", padding="10")
-        players_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 5))
-        players_frame.columnconfigure(0, weight=1)
-        players_frame.rowconfigure(2, weight=1)
-        
-        player_controls = ttk.Frame(players_frame)
-        player_controls.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
-        
-        ttk.Button(player_controls, text="Add Player", command=self.add_player).grid(row=0, column=0, padx=5)
-        ttk.Button(player_controls, text="Remove Selected", command=self.remove_player).grid(row=0, column=1, padx=5)
-        
-        # Instructions
-        ttk.Label(players_frame, text="Double-click player to eliminate", 
-                 font=("Arial", 9)).grid(row=1, column=0, sticky=tk.W, pady=(0, 5))
-        
-        # Players list
-        self.players_tree = ttk.Treeview(players_frame, columns=("Name",), show="headings", height=6)
-        self.players_tree.heading("Name", text="Player Name")
-        self.players_tree.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        players_scroll = ttk.Scrollbar(players_frame, orient="vertical", command=self.players_tree.yview)
-        players_scroll.grid(row=2, column=1, sticky=(tk.N, tk.S))
-        self.players_tree.configure(yscrollcommand=players_scroll.set)
-        
-        # Bind double-click to eliminate player
-        self.players_tree.bind("<Double-1>", self.eliminate_player)
-        
-        # Eliminated Players section
-        eliminated_frame = ttk.LabelFrame(middle_frame, text="Eliminated Players", padding="10")
-        eliminated_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(5, 0))
-        eliminated_frame.columnconfigure(0, weight=1)
-        eliminated_frame.rowconfigure(1, weight=1)
-        
-        # Controls for eliminated players
-        eliminated_controls = ttk.Frame(eliminated_frame)
-        eliminated_controls.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
-        
-        ttk.Label(eliminated_controls, text="Double-click or right-click to reactivate", 
-                 font=("Arial", 9)).grid(row=0, column=0, sticky=tk.W)
-        ttk.Button(eliminated_controls, text="Reactivate Selected", 
-                  command=self.reactivate_selected_player).grid(row=0, column=1, padx=5, sticky=tk.E)
-        
-        self.eliminated_tree = ttk.Treeview(eliminated_frame, columns=("Position", "Name", "Prize"), show="headings", height=6)
-        self.eliminated_tree.heading("Position", text="Position")
-        self.eliminated_tree.heading("Name", text="Player")
-        self.eliminated_tree.heading("Prize", text="Prize")
-        self.eliminated_tree.column("Position", width=70)
-        self.eliminated_tree.column("Name", width=120)
-        self.eliminated_tree.column("Prize", width=100)
-        self.eliminated_tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        eliminated_scroll = ttk.Scrollbar(eliminated_frame, orient="vertical", command=self.eliminated_tree.yview)
-        eliminated_scroll.grid(row=1, column=1, sticky=(tk.N, tk.S))
-        self.eliminated_tree.configure(yscrollcommand=eliminated_scroll.set)
-        
-        # Bind double-click to reactivate player
-        self.eliminated_tree.bind("<Double-1>", self.reactivate_player)
-        
-        # Add right-click context menu for eliminated players
-        self.eliminated_context_menu = tk.Menu(self.root, tearoff=0)
-        self.eliminated_context_menu.add_command(label="Reactivate Player", command=self.reactivate_selected_player)
-        self.eliminated_tree.bind("<Button-3>", self.show_eliminated_context_menu)  # Right-click
-        
-        # Right panel - Prize Structure
-        right_frame = ttk.Frame(main_frame, padding="5")
-        right_frame.grid(row=0, column=2, sticky=(tk.W, tk.E, tk.N, tk.S))
-        right_frame.columnconfigure(0, weight=1)
-        right_frame.rowconfigure(1, weight=1)
-        
-        # Prize pool display
-        pool_frame = ttk.LabelFrame(right_frame, text="Prize Pool", padding="10")
-        pool_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-        
-        self.pool_label = ttk.Label(pool_frame, text=f"${self.config['total_prize_pool']:,}", 
-                                   font=("Arial", 20, "bold"))
-        self.pool_label.grid(row=0, column=0, pady=10)
-        
-        # Prize structure display
-        prizes_frame = ttk.LabelFrame(right_frame, text="Payout Structure", padding="10")
-        prizes_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        prizes_frame.columnconfigure(0, weight=1)
-        prizes_frame.rowconfigure(0, weight=1)
-        
-        self.prizes_tree = ttk.Treeview(prizes_frame, columns=("Position", "Prize"), show="headings", height=12)
-        self.prizes_tree.heading("Position", text="Position")
-        self.prizes_tree.heading("Prize", text="Prize Amount")
-        self.prizes_tree.column("Position", width=80)
-        self.prizes_tree.column("Prize", width=120)
-        self.prizes_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        prizes_scroll = ttk.Scrollbar(prizes_frame, orient="vertical", command=self.prizes_tree.yview)
-        prizes_scroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        self.prizes_tree.configure(yscrollcommand=prizes_scroll.set)
+        # Bottom section - Statistics and controls
+        self.setup_bottom_section(main_frame)
         
         # Load initial data
         self.update_display()
         self.populate_players()
         self.populate_eliminated()
         self.populate_prizes()
+    
+    def setup_timer_section(self, parent):
+        """Setup the timer section with circular displays"""
+        timer_frame = tk.Frame(parent, bg='#1e1e1e')
+        timer_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        # Left circular display - Blinds
+        left_frame = tk.Frame(timer_frame, bg='#1e1e1e')
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.create_circular_display(left_frame, "BLINDS", "25/50", self.config.get("accent_color", "#2196f3"))
+        
+        # Center section - Main timer and controls  
+        center_frame = tk.Frame(timer_frame, bg='#1e1e1e')
+        center_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=40)
+        
+        # TIME TO NEXT BREAK label
+        time_label = tk.Label(center_frame, text="TIME TO NEXT BREAK", 
+                             font=("Arial", 12), fg="#888888", bg="#1e1e1e")
+        time_label.pack(pady=(20, 10))
+        
+        # Main timer display
+        self.timer_label = tk.Label(center_frame, text="20:00", 
+                                   font=("Arial", 48, "bold"), fg=self.config.get("accent_color", "#2196f3"), bg="#1e1e1e")
+        self.timer_label.pack(pady=10)
+        
+        # Total playing time label
+        total_time_text = tk.Label(center_frame, text="TOTAL PLAYING TIME", 
+                                 font=("Arial", 10), fg="#888888", bg="#1e1e1e")
+        total_time_text.pack(pady=(10, 5))
+        
+        # Total playing time display
+        self.total_time_display = tk.Label(center_frame, text="00:00", 
+                                          font=("Arial", 16), fg="#ffffff", bg="#1e1e1e")
+        self.total_time_display.pack(pady=5)
+        
+        # Tournament logo/icon area - bigger without PIT BOSS text
+        if self.config.get("tournament_title") != "Pit Boss - Poker Timer":
+            title_label = tk.Label(center_frame, text=self.config.get("tournament_title", "POKER"), 
+                                 font=("Arial", 14, "bold"), fg=self.config.get("accent_color", "#2196f3"), bg="#1e1e1e")
+            title_label.pack(pady=10)
+        
+        # Add large icon without PIT BOSS text
+        if hasattr(self, 'display_icon') and self.display_icon:
+            icon_label = tk.Label(center_frame, image=self.display_icon, bg="#1e1e1e")
+            icon_label.pack(pady=(10, 10))
+        
+        # Right circular display - Ante
+        right_frame = tk.Frame(timer_frame, bg='#1e1e1e')
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        self.create_circular_display(right_frame, "ANTE", "0", self.config.get("accent_color", "#2196f3"))
+        
+        # Next level displays under circles
+        self.create_next_level_displays(left_frame, right_frame)
+    
+    def setup_main_panels(self, parent):
+        """Setup the main three-panel layout for players and prizes"""
+        panels_frame = tk.Frame(parent, bg='#1e1e1e')
+        panels_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        
+        # Left Panel - Active Players
+        self.setup_players_panel(panels_frame)
+        
+        # Center Panel - Eliminated Players
+        self.setup_eliminated_panel(panels_frame)
+        
+        # Right Panel - Prize Structure
+        self.setup_prizes_panel(panels_frame)
+    
+    def setup_players_panel(self, parent):
+        """Setup active players panel"""
+        players_frame = tk.LabelFrame(parent, text="ACTIVE PLAYERS", 
+                                     fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e',
+                                     font=("Arial", 12, "bold"))
+        players_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        
+        # Players treeview
+        self.players_tree = ttk.Treeview(players_frame, columns=("Name",), show="headings", height=8)
+        self.players_tree.heading("Name", text="Player Name")
+        self.players_tree.column("Name", width=150)
+        self.players_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Bind double-click to eliminate
+        self.players_tree.bind("<Double-1>", self.eliminate_player)
+        
+        # Players control buttons
+        players_btn_frame = tk.Frame(players_frame, bg='#1e1e1e')
+        players_btn_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        
+        tk.Button(players_btn_frame, text="Add Player", command=self.add_player,
+                 bg=self.config.get("accent_color", "#2196f3"), fg='white',
+                 font=("Arial", 9), padx=10).pack(side=tk.LEFT, padx=2)
+        
+        tk.Button(players_btn_frame, text="Remove", command=self.remove_player,
+                 bg='#f44336', fg='white',
+                 font=("Arial", 9), padx=10).pack(side=tk.LEFT, padx=2)
+        
+        # Instructions
+        tk.Label(players_frame, text="Double-click to eliminate", 
+                font=("Arial", 8), fg="#888888", bg="#1e1e1e").pack(pady=(0, 5))
+    
+    def setup_eliminated_panel(self, parent):
+        """Setup eliminated players panel"""  
+        eliminated_frame = tk.LabelFrame(parent, text="ELIMINATED PLAYERS",
+                                        fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e',
+                                        font=("Arial", 12, "bold"))
+        eliminated_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        # Eliminated players treeview
+        self.eliminated_tree = ttk.Treeview(eliminated_frame, columns=("Position", "Name", "Prize"), show="headings", height=8)
+        self.eliminated_tree.heading("Position", text="Pos")
+        self.eliminated_tree.heading("Name", text="Player")
+        self.eliminated_tree.heading("Prize", text="Prize")
+        
+        self.eliminated_tree.column("Position", width=40)
+        self.eliminated_tree.column("Name", width=100)
+        self.eliminated_tree.column("Prize", width=80)
+        
+        self.eliminated_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Bind double-click to reactivate
+        self.eliminated_tree.bind("<Double-1>", self.reactivate_player)
+        
+        # Context menu for eliminated players
+        self.eliminated_context_menu = tk.Menu(self.root, tearoff=0)
+        self.eliminated_context_menu.add_command(label="Reactivate Player", command=self.reactivate_selected_player)
+        self.eliminated_tree.bind("<Button-3>", self.show_eliminated_context_menu)
+        
+        # Eliminated control button
+        eliminated_btn_frame = tk.Frame(eliminated_frame, bg='#1e1e1e')
+        eliminated_btn_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        
+        tk.Button(eliminated_btn_frame, text="Reactivate Selected", command=self.reactivate_selected_player,
+                 bg='#4caf50', fg='white',
+                 font=("Arial", 9), padx=10).pack(side=tk.LEFT)
+        
+        # Instructions
+        tk.Label(eliminated_frame, text="Double-click or right-click to reactivate", 
+                font=("Arial", 8), fg="#888888", bg="#1e1e1e").pack(pady=(0, 5))
+    
+    def setup_prizes_panel(self, parent):
+        """Setup prize structure panel"""
+        prizes_frame = tk.LabelFrame(parent, text="PRIZE STRUCTURE",
+                                    fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e',
+                                    font=("Arial", 12, "bold"))
+        prizes_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
+        # Prize pool display
+        pool_frame = tk.Frame(prizes_frame, bg='#1e1e1e')
+        pool_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        tk.Label(pool_frame, text="TOTAL PRIZE POOL", 
+                font=("Arial", 10), fg="#888888", bg="#1e1e1e").pack()
+        
+        self.prize_pool_label = tk.Label(pool_frame, text=f"${self.config.get('total_prize_pool', 1000):,}", 
+                                        font=("Arial", 20, "bold"), fg=self.config.get("accent_color", "#2196f3"), bg="#1e1e1e")
+        self.prize_pool_label.pack()
+        
+        # Prize structure treeview
+        self.prizes_tree = ttk.Treeview(prizes_frame, columns=("Position", "Prize"), show="headings", height=6)
+        self.prizes_tree.heading("Position", text="Position")  
+        self.prizes_tree.heading("Prize", text="Prize")
+        
+        self.prizes_tree.column("Position", width=70)
+        self.prizes_tree.column("Prize", width=100)
+        
+        self.prizes_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        
+        # Prize control button
+        prizes_btn_frame = tk.Frame(prizes_frame, bg='#1e1e1e')
+        prizes_btn_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        
+        tk.Button(prizes_btn_frame, text="Edit Prizes", command=self.edit_prizes,
+                 bg=self.config.get("accent_color", "#2196f3"), fg='white',
+                 font=("Arial", 9), padx=10).pack()
+    
+    def setup_bottom_section(self, parent):
+        """Setup bottom statistics and control sections"""
+        bottom_frame = tk.Frame(parent, bg='#1e1e1e')
+        bottom_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # Statistics bar
+        self.create_stats_bar(bottom_frame)
+        
+        # Control buttons
+        self.create_control_buttons(bottom_frame)
+    
+    def create_circular_display(self, parent, label, value, color):
+        """Create a circular display for blinds/ante with values inside circles"""
+        container = tk.Frame(parent, bg='#1e1e1e')
+        container.pack(expand=True, pady=50)
+        
+        # Label text above circle
+        label_widget = tk.Label(container, text=label, font=("Arial", 10), 
+                               fg="#888888", bg="#1e1e1e")
+        label_widget.pack(pady=(0, 10))
+        
+        # Create circular canvas
+        canvas = tk.Canvas(container, width=150, height=150, bg='#1e1e1e', highlightthickness=0)
+        canvas.pack()
+        
+        # Draw circle
+        canvas.create_oval(10, 10, 140, 140, outline=color, width=3, fill='#2a2a2a')
+        
+        # Add text inside the circle
+        if label == "BLINDS":
+            self.blinds_text_id = canvas.create_text(75, 75, text=value, font=("Arial", 20, "bold"), 
+                                                    fill="#ffffff", anchor="center")
+            self.blinds_canvas = canvas
+        else:  # ANTE
+            self.ante_text_id = canvas.create_text(75, 75, text=value, font=("Arial", 24, "bold"), 
+                                                  fill="#ffffff", anchor="center")
+            self.ante_canvas = canvas
+    
+    def create_next_level_displays(self, left_frame, right_frame):
+        """Create next level displays under the circular displays"""
+        # Left - Next blinds
+        left_next = tk.Frame(left_frame, bg='#1e1e1e')
+        left_next.pack(pady=(0, 20))
+        
+        tk.Label(left_next, text="NEXT LEVEL", font=("Arial", 10), 
+                fg="#888888", bg="#1e1e1e").pack()
+        self.next_blind_label = tk.Label(left_next, text="50/100", font=("Arial", 24, "bold"), 
+                                        fg="#ffffff", bg="#1e1e1e")
+        self.next_blind_label.pack()
+        
+        # Right - Next ante
+        right_next = tk.Frame(right_frame, bg='#1e1e1e')
+        right_next.pack(pady=(0, 20))
+        
+        tk.Label(right_next, text="NEXT LEVEL", font=("Arial", 10), 
+                fg="#888888", bg="#1e1e1e").pack()
+        self.next_ante_label = tk.Label(right_next, text="0", font=("Arial", 24, "bold"), 
+                                       fg="#ffffff", bg="#1e1e1e")
+        self.next_ante_label.pack()
+    
+    def create_stats_bar(self, parent):
+        """Create bottom statistics bar"""
+        stats_frame = tk.Frame(parent, bg='#1e1e1e')
+        stats_frame.pack(fill=tk.X, pady=(20, 10))
+        
+        # Create stat items
+        stats = [
+            ("PLAYERS LEFT", "players_count", lambda: str(len(self.config.get("players", [])))),
+            ("TOTAL TIME", "total_time", lambda: self.format_time(self.total_game_time)),
+            ("ADD-ONS", "add_ons", lambda: "0"),
+            ("AVG STACK", "avg_stack", lambda: "15000"),
+            ("TOTAL CHIPS", "total_chips", lambda: str(self.config.get("total_prize_pool", 200000)))
+        ]
+        
+        for i, (label, attr, value_func) in enumerate(stats):
+            stat_frame = tk.Frame(stats_frame, bg='#1e1e1e')
+            stat_frame.pack(side=tk.LEFT, expand=True, padx=10)
+            
+            tk.Label(stat_frame, text=label, font=("Arial", 8), 
+                    fg="#888888", bg="#1e1e1e").pack()
+            
+            value_label = tk.Label(stat_frame, text=value_func(), font=("Arial", 16, "bold"), 
+                                  fg="#ffffff", bg="#1e1e1e")
+            value_label.pack()
+            
+            # Store reference for updates
+            setattr(self, f"{attr}_label", value_label)
+    
+    def create_control_buttons(self, parent):
+        """Create control buttons at bottom"""
+        control_frame = tk.Frame(parent, bg='#1e1e1e')
+        control_frame.pack(fill=tk.X, pady=10)
+        
+        # Media player style buttons
+        button_frame = tk.Frame(control_frame, bg='#1e1e1e')
+        button_frame.pack()
+        
+        # Create custom styled buttons
+        btn_style = {
+            'font': ('Arial', 12),
+            'bg': '#404040',
+            'fg': '#ffffff',
+            'activebackground': '#606060',
+            'activeforeground': '#ffffff',
+            'border': 0,
+            'padx': 15,
+            'pady': 8
+        }
+        
+        # Previous level button
+        tk.Button(button_frame, text="◀◀", command=self.prev_blind_level, **btn_style).pack(side=tk.LEFT, padx=5)
+        
+        # Start/Pause button (larger, center)
+        self.start_stop_btn = tk.Button(button_frame, text="▶ START", command=self.toggle_game_timer,
+                                       font=('Arial', 14, 'bold'), bg=self.config.get("accent_color", "#2196f3"), fg='#ffffff',
+                                       activebackground=self.darken_color(self.config.get("accent_color", "#2196f3")), activeforeground='#ffffff',
+                                       border=0, padx=20, pady=10)
+        self.start_stop_btn.pack(side=tk.LEFT, padx=10)
+        
+        # Next level button  
+        tk.Button(button_frame, text="▶▶", command=self.next_blind_level, **btn_style).pack(side=tk.LEFT, padx=5)
+        
+        # Reset button
+        tk.Button(button_frame, text="↻", command=self.reset_timers, **btn_style).pack(side=tk.LEFT, padx=5)
+        
+        # Settings button
+        self.settings_btn = tk.Button(button_frame, text="⚙ SETTINGS", command=self.show_settings,
+                                     bg='#2196f3', fg='#ffffff', font=('Arial', 10),
+                                     activebackground='#1976d2', activeforeground='#ffffff',
+                                     border=0, padx=15, pady=8)
+        self.settings_btn.pack(side=tk.RIGHT, padx=(50, 0))
+    
+    def show_settings(self):
+        """Show comprehensive settings dialog"""
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("Settings")
+        settings_window.geometry("600x500")
+        settings_window.configure(bg='#1e1e1e')
+        settings_window.grab_set()
+        
+        # Main settings frame
+        main_frame = tk.Frame(settings_window, bg='#1e1e1e')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Settings sections
+        sections_frame = tk.Frame(main_frame, bg='#1e1e1e')
+        sections_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Tournament section
+        tournament_section = tk.LabelFrame(sections_frame, text="Tournament Settings", 
+                                         fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e',
+                                         font=("Arial", 12, "bold"))
+        tournament_section.pack(fill=tk.X, pady=(0, 15))
+        
+        tournament_frame = tk.Frame(tournament_section, bg='#1e1e1e')
+        tournament_frame.pack(fill=tk.X, padx=15, pady=10)
+        
+        btn_row1 = tk.Frame(tournament_frame, bg='#1e1e1e')
+        btn_row1.pack(fill=tk.X, pady=5)
+        
+        tk.Button(btn_row1, text="Edit Tournament Title", command=self.edit_title,
+                 bg=self.config.get("accent_color", "#2196f3"), fg='white', 
+                 font=("Arial", 10), padx=15).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(btn_row1, text="Edit Timer Settings", command=self.edit_timer_settings,
+                 bg=self.config.get("accent_color", "#2196f3"), fg='white',
+                 font=("Arial", 10), padx=15).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(btn_row1, text="Edit Blind Structure", command=self.edit_blinds,
+                 bg=self.config.get("accent_color", "#2196f3"), fg='white',
+                 font=("Arial", 10), padx=15).pack(side=tk.LEFT, padx=5)
+        
+        # Appearance section  
+        appearance_section = tk.LabelFrame(sections_frame, text="Appearance Settings",
+                                         fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e',
+                                         font=("Arial", 12, "bold"))
+        appearance_section.pack(fill=tk.X, pady=(0, 15))
+        
+        appearance_frame = tk.Frame(appearance_section, bg='#1e1e1e')
+        appearance_frame.pack(fill=tk.X, padx=15, pady=10)
+        
+        btn_row2 = tk.Frame(appearance_frame, bg='#1e1e1e')
+        btn_row2.pack(fill=tk.X, pady=5)
+        
+        tk.Button(btn_row2, text="Change Theme", command=self.change_theme,
+                 bg='#4caf50', fg='white',
+                 font=("Arial", 10), padx=15).pack(side=tk.LEFT, padx=5)
+                 
+        tk.Button(btn_row2, text="Choose Accent Color", command=self.choose_accent_color,
+                 bg='#4caf50', fg='white',
+                 font=("Arial", 10), padx=15).pack(side=tk.LEFT, padx=5)
+        
+        # Player Management section
+        players_section = tk.LabelFrame(sections_frame, text="Player Management",
+                                      fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e',
+                                      font=("Arial", 12, "bold"))
+        players_section.pack(fill=tk.X, pady=(0, 15))
+        
+        players_frame = tk.Frame(players_section, bg='#1e1e1e')
+        players_frame.pack(fill=tk.X, padx=15, pady=10)
+        
+        # Current player count
+        count_label = tk.Label(players_frame, 
+                             text=f"Active Players: {len(self.config.get('players', []))}", 
+                             fg='white', bg='#1e1e1e', font=("Arial", 10))
+        count_label.pack(anchor=tk.W, pady=(0, 10))
+        
+        btn_row3 = tk.Frame(players_frame, bg='#1e1e1e')
+        btn_row3.pack(fill=tk.X, pady=5)
+        
+        tk.Button(btn_row3, text="Add Player", command=lambda: [self.add_player(), settings_window.destroy()],
+                 bg='#4caf50', fg='white',
+                 font=("Arial", 10), padx=15).pack(side=tk.LEFT, padx=5)
+                 
+        tk.Button(btn_row3, text="Manage Players", command=lambda: [self.manage_players(), settings_window.destroy()],
+                 bg='#4caf50', fg='white', 
+                 font=("Arial", 10), padx=15).pack(side=tk.LEFT, padx=5)
+        
+        # Prize Management section
+        prizes_section = tk.LabelFrame(sections_frame, text="Prize Management",
+                                     fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e',
+                                     font=("Arial", 12, "bold"))
+        prizes_section.pack(fill=tk.X, pady=(0, 15))
+        
+        prizes_frame = tk.Frame(prizes_section, bg='#1e1e1e')
+        prizes_frame.pack(fill=tk.X, padx=15, pady=10)
+        
+        # Current prize pool
+        pool_label = tk.Label(prizes_frame, 
+                            text=f"Prize Pool: ${self.config.get('total_prize_pool', 1000):,}", 
+                            fg='white', bg='#1e1e1e', font=("Arial", 10))
+        pool_label.pack(anchor=tk.W, pady=(0, 10))
+        
+        tk.Button(prizes_frame, text="Edit Prize Structure", command=lambda: [self.edit_prizes(), settings_window.destroy()],
+                 bg='#ff9800', fg='white',
+                 font=("Arial", 10), padx=15).pack(anchor=tk.W)
+        
+        # Close button
+        close_frame = tk.Frame(main_frame, bg='#1e1e1e')
+        close_frame.pack(fill=tk.X, pady=(20, 0))
+        
+        tk.Button(close_frame, text="Close", command=settings_window.destroy,
+                 bg='#666666', fg='white', font=("Arial", 12),
+                 padx=20, pady=5).pack()
+    
+    def darken_color(self, color, factor=0.8):
+        """Darken a hex color for hover effects"""
+        if color.startswith('#'):
+            color = color[1:]
+        try:
+            r = int(color[0:2], 16)
+            g = int(color[2:4], 16) 
+            b = int(color[4:6], 16)
+            r = int(r * factor)
+            g = int(g * factor)
+            b = int(b * factor)
+            return f"#{r:02x}{g:02x}{b:02x}"
+        except:
+            return "#1976d2"  # fallback color
     
     def format_time(self, seconds):
         """Format seconds into MM:SS format"""
@@ -541,64 +803,58 @@ class PokerTimer:
     
     def update_display(self):
         """Update timer and blinds display"""
+        # Update main timer - show break timer when on break, otherwise time to next break
         if self.is_break_running:
             self.timer_label.config(text=f"{self.format_time(self.break_time_remaining)}")
-            self.status_label.config(text="BREAK TIME")
-            # Update break timer progress bar
-            max_break_time = self.config["break_duration"] * 60
-            if max_break_time > 0:
-                progress = (self.break_time_remaining / max_break_time) * 100
-                self.timer_progress['value'] = progress
+            # Change header during break
+            if hasattr(self, 'time_label'):
+                self.time_label.config(text="BREAK TIME REMAINING")
         else:
             self.timer_label.config(text=self.format_time(self.game_time_remaining))
-            if self.is_game_running:
-                self.status_label.config(text="Game Timer - RUNNING")
-            else:
-                self.status_label.config(text="Game Timer - PAUSED")
-            
-            # Update game timer progress bar
-            max_game_time = self.config["game_duration"] * 60
-            if max_game_time > 0:
-                progress = (self.game_time_remaining / max_game_time) * 100
-                self.timer_progress['value'] = progress
+            # Reset header for game time
+            if hasattr(self, 'time_label'):
+                self.time_label.config(text="TIME TO NEXT BREAK")
         
-        # Update blinds display
+        # Update blinds and ante displays
         if self.current_level <= len(self.config["blinds"]):
             blind = self.config["blinds"][self.current_level - 1]
-            self.level_label.config(text=f"Level {self.current_level}")
-            self.blinds_label.config(text=f"{blind['small']}/{blind['big']}")
-            self.ante_label.config(text=f"Ante: {blind['ante']}")
             
-            # Update blind countdown timer
-            self.blind_timer_label.config(text=f"Next increase in: {self.format_time(self.blind_time_remaining)}")
+            # Update circular displays (text inside circles)
+            if hasattr(self, 'blinds_canvas') and hasattr(self, 'blinds_text_id'):
+                self.blinds_canvas.itemconfig(self.blinds_text_id, text=f"{blind['small']}/{blind['big']}")
+            if hasattr(self, 'ante_canvas') and hasattr(self, 'ante_text_id'):
+                self.ante_canvas.itemconfig(self.ante_text_id, text=str(blind['ante']))
             
-            # Update blind progress bar
-            max_blind_time = self.config["blind_increase_interval"] * 60
-            if max_blind_time > 0:
-                progress = (self.blind_time_remaining / max_blind_time) * 100
-                self.blind_progress['value'] = progress
+            # Update total playing time display
+            if hasattr(self, 'total_time_display'):
+                self.total_time_display.config(text=self.format_time(self.total_game_time))
             
-            # Update next blind level display
+            # Update next level displays
             if self.current_level < len(self.config["blinds"]):
                 next_blind = self.config["blinds"][self.current_level]
-                self.next_blind_label.config(text=f"Next: {next_blind['small']}/{next_blind['big']}")
+                self.next_blind_label.config(text=f"{next_blind['small']}/{next_blind['big']}")
+                self.next_ante_label.config(text=str(next_blind['ante']))
             else:
-                self.next_blind_label.config(text="Next: Final Level")
+                self.next_blind_label.config(text="FINAL")
+                self.next_ante_label.config(text="LEVEL")
+        
+        # Update statistics bar
+        if hasattr(self, 'players_count_label'):
+            self.players_count_label.config(text=str(len(self.config.get("players", []))))
+        if hasattr(self, 'total_time_label'):
+            self.total_time_label.config(text=self.format_time(self.total_game_time))
+        if hasattr(self, 'total_chips_label'):
+            self.total_chips_label.config(text=str(self.config.get("total_prize_pool", 200000)))
+        
+        # Update prize pool display
+        if hasattr(self, 'prize_pool_label'):
+            self.prize_pool_label.config(text=f"${self.config.get('total_prize_pool', 1000):,}")
         
         # Update button states
         if self.is_game_running:
-            self.start_stop_btn.config(text="Pause Game")
+            self.start_stop_btn.config(text="⏸ PAUSE")
         else:
-            self.start_stop_btn.config(text="Start Game")
-        
-        if self.is_break_running:
-            self.break_btn.config(text="End Break")
-        else:
-            self.break_btn.config(text="Start Break")
-        
-        # Update prize pool display
-        if hasattr(self, 'pool_label'):
-            self.pool_label.config(text=f"${self.config['total_prize_pool']:,}")
+            self.start_stop_btn.config(text="▶ START")
     
     def toggle_game_timer(self):
         """Toggle game timer on/off"""
@@ -606,9 +862,13 @@ class PokerTimer:
             self.is_break_running = False
         
         if not self.is_game_running:
-            # Starting the game - reset timer if it's at 0
+            # Starting the game - reset timer if it's at 0 and set start time
             if self.game_time_remaining <= 0:
                 self.game_time_remaining = self.config["game_duration"] * 60
+            
+            # Set game start time if not already set
+            if not self.game_start_time:
+                self.game_start_time = datetime.now()
         
         self.is_game_running = not self.is_game_running
         self.update_display()
@@ -632,9 +892,8 @@ class PokerTimer:
         self.break_time_remaining = self.config["break_duration"] * 60
         self.last_blind_increase = datetime.now()
         self.blind_time_remaining = self.config["blind_increase_interval"] * 60
-        # Reset progress bars
-        self.timer_progress['value'] = 100
-        self.blind_progress['value'] = 100
+        self.total_game_time = 0
+        self.game_start_time = None
         self.update_display()
     
     def next_blind_level(self):
@@ -657,6 +916,10 @@ class PokerTimer:
             if self.is_game_running and self.game_time_remaining > 0:
                 self.game_time_remaining -= 1
                 
+                # Track total game time
+                if self.game_start_time:
+                    self.total_game_time = int((datetime.now() - self.game_start_time).total_seconds())
+                
                 # Update blind countdown timer - only when game is running
                 if self.blind_time_remaining > 0:
                     self.blind_time_remaining -= 1
@@ -677,6 +940,10 @@ class PokerTimer:
             elif self.is_break_running and self.break_time_remaining > 0:
                 self.break_time_remaining -= 1
                 
+                # Continue tracking total game time during breaks
+                if self.game_start_time:
+                    self.total_game_time = int((datetime.now() - self.game_start_time).total_seconds())
+                
                 if self.break_time_remaining == 0:
                     self.is_break_running = False
                     self.game_time_remaining = self.config["game_duration"] * 60
@@ -686,12 +953,58 @@ class PokerTimer:
             self.root.after_idle(self.update_display)
             time.sleep(1)
     
+    def show_settings_dialog(self):
+        """Show settings dialog"""
+        messagebox.showinfo("Settings", "Settings dialog - use individual buttons for now: Manage Players, Change Theme, Edit Tournament Settings, etc.")
+    
+    def manage_players(self):
+        """Open simple player management dialog"""
+        player_window = tk.Toplevel(self.root)
+        player_window.title("Manage Players")
+        player_window.geometry("400x300")
+        player_window.configure(bg='#1e1e1e')
+        
+        frame = tk.Frame(player_window, bg='#1e1e1e')
+        frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        tk.Label(frame, text="Player Management", font=('Arial', 14, 'bold'), 
+                fg=self.config.get("accent_color", "#2196f3"), bg='#1e1e1e').pack(pady=(0, 20))
+        
+        # Show current player count
+        tk.Label(frame, text=f"Current players: {len(self.config.get('players', []))}", 
+                fg='white', bg='#1e1e1e', font=('Arial', 12)).pack(pady=10)
+        
+        # Add/Remove buttons
+        btn_frame = tk.Frame(frame, bg='#1e1e1e')
+        btn_frame.pack(pady=20)
+        
+        tk.Button(btn_frame, text="Add Player", command=lambda: [self.add_player(), player_window.destroy()],
+                 bg=self.config.get("accent_color", "#2196f3"), fg='white', padx=15).pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="Remove Player", command=lambda: [self.remove_player(), player_window.destroy()],
+                 bg='#f44336', fg='white', padx=15).pack(side=tk.LEFT, padx=10)
+        
+        tk.Button(frame, text="Close", command=player_window.destroy,
+                 bg='#666666', fg='white', padx=20).pack(pady=20)
+    
+    def choose_accent_color(self):
+        """Choose custom accent color"""
+        try:
+            from tkinter import colorchooser
+            color = colorchooser.askcolor(initialcolor=self.config.get("accent_color", "#2196f3"))[1]
+            if color:
+                self.config["accent_color"] = color
+                self.save_config()
+                messagebox.showinfo("Color Changed", "Accent color updated! Some changes may require restart.")
+        except ImportError:
+            messagebox.showerror("Error", "Color chooser not available.")
+    
     def add_player(self):
         """Add a new player"""
         name = simpledialog.askstring("Add Player", "Enter player name:")
         if name and name.strip():
             self.config["players"].append(name.strip())
             self.populate_players()
+            self.update_display()
     
     def remove_player(self):
         """Remove selected player"""
@@ -701,6 +1014,7 @@ class PokerTimer:
             player_name = item["values"][0]
             self.config["players"].remove(player_name)
             self.populate_players()
+            self.update_display()
     
     def eliminate_player(self, event):
         """Eliminate player and add to prize list"""
@@ -727,6 +1041,7 @@ class PokerTimer:
             
             self.populate_players()
             self.populate_eliminated()
+            self.update_display()
     
     def reactivate_player(self, event):
         """Reactivate an eliminated player (move back to active)"""
@@ -763,6 +1078,7 @@ class PokerTimer:
                     
                     self.populate_players()
                     self.populate_eliminated()
+                    self.update_display()
                     
                     messagebox.showinfo("Player Reactivated", 
                                       f"{player_name} has been moved back to active players.\n"
