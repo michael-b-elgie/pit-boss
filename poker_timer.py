@@ -295,10 +295,10 @@ class PokerTimer:
                     width = original_icon.width()
                     height = original_icon.height()
                     
-                    if width > 200 or height > 200:
-                        # Calculate scale factor to fit within 200x200 (bigger than before)
-                        scale_x = 200 / width
-                        scale_y = 200 / height
+                    if width > 300 or height > 300:
+                        # Calculate scale factor to fit within 300x300 (much bigger now)
+                        scale_x = 300 / width
+                        scale_y = 300 / height
                         scale = min(scale_x, scale_y)
                         
                         if scale < 1:
@@ -375,10 +375,10 @@ class PokerTimer:
         center_frame = tk.Frame(timer_frame, bg='#1e1e1e')
         center_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=40)
         
-        # TIME TO NEXT BREAK label
-        time_label = tk.Label(center_frame, text="TIME TO NEXT BREAK", 
+        # TIME TO NEXT BREAK label (store reference for break mode)
+        self.time_label = tk.Label(center_frame, text="TIME TO NEXT BREAK", 
                              font=("Arial", 12), fg="#888888", bg="#1e1e1e")
-        time_label.pack(pady=(20, 10))
+        self.time_label.pack(pady=(20, 10))
         
         # Main timer display
         self.timer_label = tk.Label(center_frame, text="20:00", 
@@ -437,7 +437,7 @@ class PokerTimer:
         players_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
         
         # Players treeview
-        self.players_tree = ttk.Treeview(players_frame, columns=("Name",), show="headings", height=8)
+        self.players_tree = ttk.Treeview(players_frame, columns=("Name",), show="headings", height=1)
         self.players_tree.heading("Name", text="Player Name")
         self.players_tree.column("Name", width=150)
         self.players_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -469,7 +469,7 @@ class PokerTimer:
         eliminated_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         # Eliminated players treeview
-        self.eliminated_tree = ttk.Treeview(eliminated_frame, columns=("Position", "Name", "Prize"), show="headings", height=8)
+        self.eliminated_tree = ttk.Treeview(eliminated_frame, columns=("Position", "Name", "Prize"), show="headings", height=1)
         self.eliminated_tree.heading("Position", text="Pos")
         self.eliminated_tree.heading("Name", text="Player")
         self.eliminated_tree.heading("Prize", text="Prize")
@@ -519,7 +519,7 @@ class PokerTimer:
         self.prize_pool_label.pack()
         
         # Prize structure treeview
-        self.prizes_tree = ttk.Treeview(prizes_frame, columns=("Position", "Prize"), show="headings", height=6)
+        self.prizes_tree = ttk.Treeview(prizes_frame, columns=("Position", "Prize"), show="headings", height=1)
         self.prizes_tree.heading("Position", text="Position")  
         self.prizes_tree.heading("Prize", text="Prize")
         
@@ -558,43 +558,53 @@ class PokerTimer:
         label_widget.pack(pady=(0, 10))
         
         # Create circular canvas
-        canvas = tk.Canvas(container, width=150, height=150, bg='#1e1e1e', highlightthickness=0)
+        canvas = tk.Canvas(container, width=200, height=200, bg='#1e1e1e', highlightthickness=0)
         canvas.pack()
         
         # Draw circle
-        canvas.create_oval(10, 10, 140, 140, outline=color, width=3, fill='#2a2a2a')
+        canvas.create_oval(15, 15, 185, 185, outline=color, width=3, fill='#2a2a2a')
         
         # Add text inside the circle
         if label == "BLINDS":
-            self.blinds_text_id = canvas.create_text(75, 75, text=value, font=("Arial", 20, "bold"), 
+            self.blinds_text_id = canvas.create_text(100, 100, text=value, font=("Arial", 24, "bold"), 
                                                     fill="#ffffff", anchor="center")
             self.blinds_canvas = canvas
         else:  # ANTE
-            self.ante_text_id = canvas.create_text(75, 75, text=value, font=("Arial", 24, "bold"), 
+            self.ante_text_id = canvas.create_text(100, 100, text=value, font=("Arial", 28, "bold"), 
                                                   fill="#ffffff", anchor="center")
             self.ante_canvas = canvas
     
     def create_next_level_displays(self, left_frame, right_frame):
         """Create next level displays under the circular displays"""
-        # Left - Next blinds
+        # Left - Next blinds with countdown
         left_next = tk.Frame(left_frame, bg='#1e1e1e')
         left_next.pack(pady=(0, 20))
         
         tk.Label(left_next, text="NEXT LEVEL", font=("Arial", 10), 
                 fg="#888888", bg="#1e1e1e").pack()
-        self.next_blind_label = tk.Label(left_next, text="50/100", font=("Arial", 24, "bold"), 
+        self.next_blind_label = tk.Label(left_next, text="50/100", font=("Arial", 20, "bold"), 
                                         fg="#ffffff", bg="#1e1e1e")
         self.next_blind_label.pack()
         
-        # Right - Next ante
+        # Blind countdown timer
+        self.blind_countdown_label = tk.Label(left_next, text="(15:00)", font=("Arial", 12), 
+                                             fg="#888888", bg="#1e1e1e")
+        self.blind_countdown_label.pack(pady=(2, 0))
+        
+        # Right - Next ante with countdown
         right_next = tk.Frame(right_frame, bg='#1e1e1e')
         right_next.pack(pady=(0, 20))
         
         tk.Label(right_next, text="NEXT LEVEL", font=("Arial", 10), 
                 fg="#888888", bg="#1e1e1e").pack()
-        self.next_ante_label = tk.Label(right_next, text="0", font=("Arial", 24, "bold"), 
+        self.next_ante_label = tk.Label(right_next, text="0", font=("Arial", 20, "bold"), 
                                        fg="#ffffff", bg="#1e1e1e")
         self.next_ante_label.pack()
+        
+        # Ante countdown timer (same as blinds)
+        self.ante_countdown_label = tk.Label(right_next, text="(15:00)", font=("Arial", 12), 
+                                            fg="#888888", bg="#1e1e1e")
+        self.ante_countdown_label.pack(pady=(2, 0))
     
     def create_stats_bar(self, parent):
         """Create bottom statistics bar"""
@@ -808,7 +818,7 @@ class PokerTimer:
             self.timer_label.config(text=f"{self.format_time(self.break_time_remaining)}")
             # Change header during break
             if hasattr(self, 'time_label'):
-                self.time_label.config(text="BREAK TIME REMAINING")
+                self.time_label.config(text="TIME LEFT IN BREAK")
         else:
             self.timer_label.config(text=self.format_time(self.game_time_remaining))
             # Reset header for game time
@@ -829,14 +839,25 @@ class PokerTimer:
             if hasattr(self, 'total_time_display'):
                 self.total_time_display.config(text=self.format_time(self.total_game_time))
             
-            # Update next level displays
+            # Update next level displays with countdown timer
             if self.current_level < len(self.config["blinds"]):
                 next_blind = self.config["blinds"][self.current_level]
                 self.next_blind_label.config(text=f"{next_blind['small']}/{next_blind['big']}")
                 self.next_ante_label.config(text=str(next_blind['ante']))
+                
+                # Update countdown displays
+                countdown_text = f"({self.format_time(self.blind_time_remaining)})"
+                if hasattr(self, 'blind_countdown_label'):
+                    self.blind_countdown_label.config(text=countdown_text)
+                if hasattr(self, 'ante_countdown_label'):
+                    self.ante_countdown_label.config(text=countdown_text)
             else:
                 self.next_blind_label.config(text="FINAL")
                 self.next_ante_label.config(text="LEVEL")
+                if hasattr(self, 'blind_countdown_label'):
+                    self.blind_countdown_label.config(text="")
+                if hasattr(self, 'ante_countdown_label'):
+                    self.ante_countdown_label.config(text="")
         
         # Update statistics bar
         if hasattr(self, 'players_count_label'):
@@ -913,14 +934,14 @@ class PokerTimer:
     def timer_loop(self):
         """Main timer loop running in separate thread"""
         while True:
+            # Always track total game time if game has started (even when paused)
+            if self.game_start_time:
+                self.total_game_time = int((datetime.now() - self.game_start_time).total_seconds())
+            
             if self.is_game_running and self.game_time_remaining > 0:
                 self.game_time_remaining -= 1
                 
-                # Track total game time
-                if self.game_start_time:
-                    self.total_game_time = int((datetime.now() - self.game_start_time).total_seconds())
-                
-                # Update blind countdown timer - only when game is running
+                # Update blind countdown timer - only when game is running (NOT during breaks)
                 if self.blind_time_remaining > 0:
                     self.blind_time_remaining -= 1
                 
@@ -939,15 +960,12 @@ class PokerTimer:
                 
             elif self.is_break_running and self.break_time_remaining > 0:
                 self.break_time_remaining -= 1
-                
-                # Continue tracking total game time during breaks
-                if self.game_start_time:
-                    self.total_game_time = int((datetime.now() - self.game_start_time).total_seconds())
+                # Note: blind_time_remaining is NOT decremented during breaks
                 
                 if self.break_time_remaining == 0:
                     self.is_break_running = False
                     self.game_time_remaining = self.config["game_duration"] * 60
-            # When paused, blind timer stays frozen (no updates needed)
+            # When paused, both game timer and blind timer stay frozen
             
             # Update display in main thread
             self.root.after_idle(self.update_display)
@@ -1316,7 +1334,7 @@ class PrizeEditor:
         
         self.window = tk.Toplevel(parent)
         self.window.title("Edit Prize Structure")
-        self.window.geometry("500x400")
+        self.window.geometry("650x500")
         self.window.grab_set()
         
         self.setup_gui()

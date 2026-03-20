@@ -1,7 +1,7 @@
 {
-  "game_duration": 45,
-  "break_duration": 10,
-  "blind_increase_interval": 15,
+  "game_duration": 1,
+  "break_duration": 1,
+  "blind_increase_interval": 1,
   "blinds": [
     {
       "small": 25,
@@ -54,29 +54,13 @@
       "ante": 150
     }
   ],
-  "players": [],
-  "eliminated_players": [
-    {
-      "name": "Brad",
-      "position": 2,
-      "prize": 300
-    },
-    {
-      "name": "Michael",
-      "position": 3,
-      "prize": 200
-    },
-    {
-      "name": "Michelle",
-      "position": 4,
-      "prize": 0
-    },
-    {
-      "name": "Kyle",
-      "position": 1,
-      "prize": 500
-    }
+  "players": [
+    "Kyle",
+    "Michelle",
+    "Michael",
+    "Brad"
   ],
+  "eliminated_players": [],
   "prize_structure": [
     {
       "position": 1,
@@ -96,15 +80,15 @@
   ],
   "total_prize_pool": 1000,
   "current_state": {
-    "level": 1,
-    "game_time_remaining": 0,
+    "level": 3,
+    "game_time_remaining": 41,
     "break_time_remaining": 0,
-    "blind_time_remaining": 0,
-    "is_game_running": false,
+    "blind_time_remaining": 42,
+    "is_game_running": true,
     "is_break_running": false,
-    "last_blind_increase": "2026-03-19T23:17:28.303834"
+    "last_blind_increase": "2026-03-20T17:48:56.685352"
   },
   "tournament_title": "Pit Boss - Poker Timer",
-  "theme": "classic",
-  "accent_color": "#2196f3"
+  "theme": "dark",
+  "accent_color": "#8e3ed7"
 }
