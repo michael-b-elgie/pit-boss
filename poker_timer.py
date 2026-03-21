@@ -351,7 +351,7 @@ class PokerTimer:
         # Middle section - Three-panel layout for players and prizes
         self.setup_main_panels(main_frame)
         
-        # Bottom section - Statistics and controls
+        # Bottom section - Controls
         self.setup_bottom_section(main_frame)
         
         # Load initial data
@@ -363,7 +363,7 @@ class PokerTimer:
     def setup_timer_section(self, parent):
         """Setup the timer section with circular displays"""
         timer_frame = tk.Frame(parent, bg='#1e1e1e')
-        timer_frame.pack(fill=tk.X, pady=(0, 20))
+        timer_frame.pack(fill=tk.X, pady=(0, 10))
         
         # Left circular display - Blinds
         left_frame = tk.Frame(timer_frame, bg='#1e1e1e')
@@ -378,33 +378,33 @@ class PokerTimer:
         # TIME TO NEXT BREAK label (store reference for break mode)
         self.time_label = tk.Label(center_frame, text="TIME TO NEXT BREAK", 
                              font=("Arial", 12), fg="#888888", bg="#1e1e1e")
-        self.time_label.pack(pady=(20, 10))
+        self.time_label.pack(pady=(10, 5))
         
         # Main timer display
         self.timer_label = tk.Label(center_frame, text="20:00", 
                                    font=("Arial", 48, "bold"), fg=self.config.get("accent_color", "#2196f3"), bg="#1e1e1e")
-        self.timer_label.pack(pady=10)
+        self.timer_label.pack(pady=5)
         
         # Total playing time label
         total_time_text = tk.Label(center_frame, text="TOTAL PLAYING TIME", 
                                  font=("Arial", 10), fg="#888888", bg="#1e1e1e")
-        total_time_text.pack(pady=(10, 5))
+        total_time_text.pack(pady=(5, 2))
         
         # Total playing time display
         self.total_time_display = tk.Label(center_frame, text="00:00", 
                                           font=("Arial", 16), fg="#ffffff", bg="#1e1e1e")
-        self.total_time_display.pack(pady=5)
+        self.total_time_display.pack(pady=2)
         
         # Tournament logo/icon area - bigger without PIT BOSS text
         if self.config.get("tournament_title") != "Pit Boss - Poker Timer":
             title_label = tk.Label(center_frame, text=self.config.get("tournament_title", "POKER"), 
                                  font=("Arial", 14, "bold"), fg=self.config.get("accent_color", "#2196f3"), bg="#1e1e1e")
-            title_label.pack(pady=10)
+            title_label.pack(pady=5)
         
         # Add large icon without PIT BOSS text
         if hasattr(self, 'display_icon') and self.display_icon:
             icon_label = tk.Label(center_frame, image=self.display_icon, bg="#1e1e1e")
-            icon_label.pack(pady=(10, 10))
+            icon_label.pack(pady=(5, 5))
         
         # Right circular display - Ante
         right_frame = tk.Frame(timer_frame, bg='#1e1e1e')
@@ -436,11 +436,21 @@ class PokerTimer:
                                      font=("Arial", 12, "bold"))
         players_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
         
+        # Player count display at top of panel
+        count_frame = tk.Frame(players_frame, bg='#1e1e1e')
+        count_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
+        
+        tk.Label(count_frame, text="PLAYERS LEFT:", font=("Arial", 9, "bold"), 
+                fg="#888888", bg="#1e1e1e").pack(side=tk.LEFT)
+        self.players_count_label = tk.Label(count_frame, text=str(len(self.config.get("players", []))), 
+                                           font=("Arial", 14, "bold"), fg="#ffffff", bg="#1e1e1e")
+        self.players_count_label.pack(side=tk.LEFT, padx=(10, 0))
+        
         # Players treeview
-        self.players_tree = ttk.Treeview(players_frame, columns=("Name",), show="headings", height=1)
+        self.players_tree = ttk.Treeview(players_frame, columns=("Name",), show="headings", height=6)
         self.players_tree.heading("Name", text="Player Name")
         self.players_tree.column("Name", width=150)
-        self.players_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.players_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
         # Bind double-click to eliminate
         self.players_tree.bind("<Double-1>", self.eliminate_player)
@@ -469,7 +479,7 @@ class PokerTimer:
         eliminated_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         # Eliminated players treeview
-        self.eliminated_tree = ttk.Treeview(eliminated_frame, columns=("Position", "Name", "Prize"), show="headings", height=1)
+        self.eliminated_tree = ttk.Treeview(eliminated_frame, columns=("Position", "Name", "Prize"), show="headings", height=6)
         self.eliminated_tree.heading("Position", text="Pos")
         self.eliminated_tree.heading("Name", text="Player")
         self.eliminated_tree.heading("Prize", text="Prize")
@@ -519,7 +529,7 @@ class PokerTimer:
         self.prize_pool_label.pack()
         
         # Prize structure treeview
-        self.prizes_tree = ttk.Treeview(prizes_frame, columns=("Position", "Prize"), show="headings", height=1)
+        self.prizes_tree = ttk.Treeview(prizes_frame, columns=("Position", "Prize"), show="headings", height=6)
         self.prizes_tree.heading("Position", text="Position")  
         self.prizes_tree.heading("Prize", text="Prize")
         
@@ -537,20 +547,17 @@ class PokerTimer:
                  font=("Arial", 9), padx=10).pack()
     
     def setup_bottom_section(self, parent):
-        """Setup bottom statistics and control sections"""
+        """Setup bottom control section"""
         bottom_frame = tk.Frame(parent, bg='#1e1e1e')
         bottom_frame.pack(fill=tk.X, pady=(10, 0))
         
-        # Statistics bar
-        self.create_stats_bar(bottom_frame)
-        
-        # Control buttons
+        # Control buttons only
         self.create_control_buttons(bottom_frame)
     
     def create_circular_display(self, parent, label, value, color):
         """Create a circular display for blinds/ante with values inside circles"""
         container = tk.Frame(parent, bg='#1e1e1e')
-        container.pack(expand=True, pady=50)
+        container.pack(expand=True, pady=30)
         
         # Label text above circle
         label_widget = tk.Label(container, text=label, font=("Arial", 10), 
@@ -578,7 +585,7 @@ class PokerTimer:
         """Create next level displays under the circular displays"""
         # Left - Next blinds with countdown
         left_next = tk.Frame(left_frame, bg='#1e1e1e')
-        left_next.pack(pady=(0, 20))
+        left_next.pack(pady=(0, 10))
         
         tk.Label(left_next, text="NEXT LEVEL", font=("Arial", 10), 
                 fg="#888888", bg="#1e1e1e").pack()
@@ -593,7 +600,7 @@ class PokerTimer:
         
         # Right - Next ante with countdown
         right_next = tk.Frame(right_frame, bg='#1e1e1e')
-        right_next.pack(pady=(0, 20))
+        right_next.pack(pady=(0, 10))
         
         tk.Label(right_next, text="NEXT LEVEL", font=("Arial", 10), 
                 fg="#888888", bg="#1e1e1e").pack()
@@ -606,38 +613,12 @@ class PokerTimer:
                                             fg="#888888", bg="#1e1e1e")
         self.ante_countdown_label.pack(pady=(2, 0))
     
-    def create_stats_bar(self, parent):
-        """Create bottom statistics bar"""
-        stats_frame = tk.Frame(parent, bg='#1e1e1e')
-        stats_frame.pack(fill=tk.X, pady=(20, 10))
-        
-        # Create stat items
-        stats = [
-            ("PLAYERS LEFT", "players_count", lambda: str(len(self.config.get("players", [])))),
-            ("TOTAL TIME", "total_time", lambda: self.format_time(self.total_game_time)),
-            ("ADD-ONS", "add_ons", lambda: "0"),
-            ("AVG STACK", "avg_stack", lambda: "15000"),
-            ("TOTAL CHIPS", "total_chips", lambda: str(self.config.get("total_prize_pool", 200000)))
-        ]
-        
-        for i, (label, attr, value_func) in enumerate(stats):
-            stat_frame = tk.Frame(stats_frame, bg='#1e1e1e')
-            stat_frame.pack(side=tk.LEFT, expand=True, padx=10)
-            
-            tk.Label(stat_frame, text=label, font=("Arial", 8), 
-                    fg="#888888", bg="#1e1e1e").pack()
-            
-            value_label = tk.Label(stat_frame, text=value_func(), font=("Arial", 16, "bold"), 
-                                  fg="#ffffff", bg="#1e1e1e")
-            value_label.pack()
-            
-            # Store reference for updates
-            setattr(self, f"{attr}_label", value_label)
+
     
     def create_control_buttons(self, parent):
         """Create control buttons at bottom"""
         control_frame = tk.Frame(parent, bg='#1e1e1e')
-        control_frame.pack(fill=tk.X, pady=10)
+        control_frame.pack(fill=tk.X, pady=(10, 5))
         
         # Media player style buttons
         button_frame = tk.Frame(control_frame, bg='#1e1e1e')
@@ -859,13 +840,9 @@ class PokerTimer:
                 if hasattr(self, 'ante_countdown_label'):
                     self.ante_countdown_label.config(text="")
         
-        # Update statistics bar
+        # Update player count in active players panel
         if hasattr(self, 'players_count_label'):
             self.players_count_label.config(text=str(len(self.config.get("players", []))))
-        if hasattr(self, 'total_time_label'):
-            self.total_time_label.config(text=self.format_time(self.total_game_time))
-        if hasattr(self, 'total_chips_label'):
-            self.total_chips_label.config(text=str(self.config.get("total_prize_pool", 200000)))
         
         # Update prize pool display
         if hasattr(self, 'prize_pool_label'):

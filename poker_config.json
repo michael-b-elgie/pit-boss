@@ -80,13 +80,13 @@
   ],
   "total_prize_pool": 1000,
   "current_state": {
-    "level": 3,
-    "game_time_remaining": 41,
+    "level": 1,
+    "game_time_remaining": 0,
     "break_time_remaining": 0,
-    "blind_time_remaining": 42,
-    "is_game_running": true,
+    "blind_time_remaining": 0,
+    "is_game_running": false,
     "is_break_running": false,
-    "last_blind_increase": "2026-03-20T17:48:56.685352"
+    "last_blind_increase": "2026-03-20T17:59:54.090914"
   },
   "tournament_title": "Pit Boss - Poker Timer",
   "theme": "dark",
